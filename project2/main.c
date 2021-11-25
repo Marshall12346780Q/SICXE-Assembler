@@ -9,6 +9,7 @@ int main(int argc, char* argv[]) {
 	long startAddress = 0;
 	long address = 0;/*stored as decimal, printed as hex*/
 	int lineCount = 0;
+	char startFlag = 0;
 	int ERRORflag = 0; /*Switched to 1 if there is an error. Program will display no output other than error message*/
 	if (argc != 2) {
 		printf("ERROR: Usage: %s filename\n", argv[0]);
@@ -48,7 +49,11 @@ int main(int argc, char* argv[]) {
 					printf("Error: Duplicate Symbol %s on line %d", symbol, lineCount);
 					ERRORflag = 1;
 				}
-				if (lineCount == 1) { strcpy(starter, symbol); } /*just use lineCount here, no need for a seperate STARTflag variable*/
+				if (startFlag == 0) 
+				{
+					strcpy(starter, symbol);  
+					startFlag = 1; /*there is a need for a seperate variable because of comments*/
+				}
 				else
 				{
 					/*printf("%s\t%X\n",symbol,address);*/
@@ -153,91 +158,83 @@ int main(int argc, char* argv[]) {
 	fclose(fp); /*PASS 1 COMPLETE Make sure all error cases close properly*/
 	if (ERRORflag == 1){return -1;}
 
+	printf("SYMBOL TABLE:\n");
+	printTable();
 	int lCount = 0;
-	FILE* fp2 = fopen(argv[1], "r"); 
-	char* field2;
-	char* field3;
+	fp = fopen(argv[1], "r"); 
 	FILE* p2 = fopen(strcat(argv[1], ".objt"), "w"); /*open file for writing*/
 	int recordLength;
 	memset(line, '\0', 1024 * sizeof(char)); 
-	/*printf("H%s  %.6X%.6X", starter, startAddress, address - startAddress); command line */
-	while (fgets(line, 1024, fp2) != NULL)
+	char* instruction;
+	printf("H%s  %.6X%.6X", starter, startAddress, address - startAddress);  
+	while (fgets(line, 1024, fp) != NULL) 
 	{
 		recordLength = 3;
 		lCount++;
-		field2 = strtok(line, " \t\n");
-		if (!(line[0] == ' ' || line[0] == '\t'))/*if the first field isn't empty*/
+		if (line[0] == 35)
 		{
-			/*printf("trashes %s ", field2);then grab the symbol, though unused, to next token strktok*/
-			field2 = strtok(NULL, " \t\n");
+			continue; /*If its a comment, don't do anything*/
 		}
-		/*printf("gets: %s", field2);*/
-		/*Check for directive and handle case by case here, it will have its own strtok for its 3rd field*/
-		/*If its not a directive do the following*/
-		int dResult = isDirective(field2);
-		if (dResult > 0)
+		symbol = strtok(line, " \t\n");
+		if (!(line[0] == ' ') || (line[0] == '\t')) /*First column is not empty*/
 		{
-			field3 = strtok(NULL, " \t\n");
-			/*printf("directive: %s ", field3);*/
-			if (dResult == 3 || dResult == 4)
+			symbol = strtok(NULL, " \t\n");
+		} 
+		int dResult = isDirective(symbol);
+		if (dResult > 0) /*Directive*/
+		{
+			symbol = strtok(NULL, " \t\n");
+			if (dResult == 3) /*BYTE*/
 			{
-				/*recordLength = 0;*/
-				if (dResult == 3) /*BYTE*/
+				int i = 2;
+				if (symbol[0] == 'C')
 				{
-					printf("\nT%.6X ", adds[lCount]);
-					int i = 2;
-					if (field3[0] == 'C')
+					while (symbol[i] != 39)
 					{
-						while (field3[i] != 39)
-						{
-							printf("%.2X", field3[i++]);
-							recordLength = recordLength + 1;
-						}
+						printf("%.2X", symbol[i++]);
+						recordLength++;
 					}
-					else if (field3[0] == 'X')
+				}
+				else if (symbol[0] == 'X')
+				{
+					printf("\nT%.6X  ", adds[lCount]);
+					while (symbol[i] != 39)
 					{
-						printf("\nT%.6X  ", adds[lCount]);
-						while (field3[i] != 39)
+						printf("%C", symbol[i++]);
+						if (i % 2 == 0)
 						{
-							printf("%C", field3[i++]);
-							if (i % 2 == 0)
-							{
-								recordLength = recordLength + 1;
-							}
+							recordLength++;
 						}
 					}
 				}
-				else if (dResult == 4) /*WORD*/
-				{
-					printf("%.6X", atoi(field3));
-					recordLength = recordLength + 3;
-				}
-				adds[lCount] = -adds[lCount];
-				printf("runs");
 			}
+			else if (dResult == 4) /*WORD*/
+			{
+				printf("%.6X", atoi(symbol));
+				recordLength = recordLength + 3;
+			}
+			adds[lCount] = -adds[lCount];
 		}
-		else
+		else /*Instruction*/
 		{
 			/*printf("\nT%.6X ", adds[lCount]);
-			printf("  %s",getOpcode(field2));*/
-			field3 = strtok(NULL, " \t\n"); /*does this seg fault? probaby*/
-			/*printf("symbol:%s ",field3);*/		 /* Some instructions have no argument aka 3rd field, this needs to be handled properly (in the searchSymbol method)*/
-			if (field3 == NULL)
+			printf("  %s",getOpcode(symbol));*/
+			instruction = strtok(NULL, " \t\n");
+			if (instruction == NULL)
 			{
 				adds[lCount] = -1;
 			}
-			/*printf("%.4X",searchSymbol(field3));*/
 		}
-		if (adds[lCount] > 0)
+		if (adds[lCount] >= 0)
 		{
-			/*printf("\nT%.6X%.2d%s%.4X", adds[lCount], recordLength, getOpcode(field2), searchSymbol(field3)); gotta be use of the data structure causing the segfault*/
+			printf("\nT%.6X%.2d%s%.4X", adds[lCount], recordLength, getOpcode(instruction), searchSymbol(symbol));
 		}
-		else {
-			printf("\nT%.6X%.2d%s\n", -adds[lCount], recordLength, "BUFFER"); /*there was a negative sign in front of adds here i hope thats not importants*/
+		else
+		{
+			printf("\nT%.6X%.2d%s\n", -adds[lCount], recordLength, "BUFFER");
 		}
-		/*printf("\nT%.6X%.X%s%X", adds[i],3, result2,result3);*/
 	}
-	/*skip lines flagged as uneccessary by -1*/
+	/*M records, skip lines flagged as uneccessary by -1*/
 	for (int k = 1; k < lCount; k++)
 	{
 		if (adds[k] < 0) { continue; }

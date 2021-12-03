@@ -27,7 +27,6 @@ int main(int argc, char* argv[]) {
 			printf("ERROR: MEMORY OVERFLOW- SIC supports up to 32K of memory, or 8000 in hex");
 			ERRORflag = 1;
 		}
-		lineCount++;
 		/*printf("line:%d address: %X\n", lineCount, address);*/
 		adds[lineCount] = address;
 		symbol = strtok(line, " \t\n");
@@ -36,6 +35,7 @@ int main(int argc, char* argv[]) {
 			/*printf("Comment detected:%s\n", line);*/
 		}
 		else {/*if it's not a comment */
+			lineCount++; 
 			if (!(line[0] == ' ' || line[0] == '\t')) /*if it's not blank, strtok should parse*/
 			{
 				if (isSymbol(symbol) == 0 || isDirective(symbol) > 0) /*Check for invalid symbol names*/
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 				/*printf("Directive Detected:'%s' ", symbol);*/
 				if (dStat == 1)/*START*/
 				{
-					if (lineCount = !1)
+					if (!(lineCount == 1))
 					{
 						printf("Error: START directive must be used on first line only");
 					}
@@ -75,6 +75,8 @@ int main(int argc, char* argv[]) {
 					address = strtol(strtok(NULL, " \t\n"), &useless, 16); /*read in the address as base 16 and store it in address*/
 					addSymbol(starter, address);
 					startAddress = address;
+					adds[lineCount] = 0;
+					printf("START found at line: %d address set to %d", lineCount, adds[lineCount]);
 				}
 				else if (dStat == 2)
 				{
@@ -156,89 +158,111 @@ int main(int argc, char* argv[]) {
 		memset(symbol, '\0', 7 * sizeof(char));*/
 	}
 	fclose(fp); /*PASS 1 COMPLETE Make sure all error cases close properly*/
-	if (ERRORflag == 1){return -1;}
 
-	printf("SYMBOL TABLE:\n");
 	printTable();
+	if (ERRORflag == 1) { return -1; }
 	int lCount = 0;
 	fp = fopen(argv[1], "r"); 
 	FILE* p2 = fopen(strcat(argv[1], ".objt"), "w"); /*open file for writing*/
 	int recordLength;
 	memset(line, '\0', 1024 * sizeof(char)); 
-	char* instruction;
-	printf("H%s  %.6X%.6X", starter, startAddress, address - startAddress);  
+	char* field3; 
+	char charBuffer[30];
+	char wordBuffer[30];
 	while (fgets(line, 1024, fp) != NULL) 
 	{
 		recordLength = 3;
-		lCount++;
-		if (line[0] == 35)
+		if (line[0] == 35) /*If its a comment, don't do anything*/
 		{
-			continue; /*If its a comment, don't do anything*/
+			continue; 
 		}
+		lCount++; /*only increment if not a comment*/
 		symbol = strtok(line, " \t\n");
-		if (!(line[0] == ' ') || (line[0] == '\t')) /*First column is not empty*/
+		if (!((line[0] == ' ') || (line[0] == '\t'))) /*First column is not empty*/
 		{
 			symbol = strtok(NULL, " \t\n");
 		} 
 		int dResult = isDirective(symbol);
 		if (dResult > 0) /*Directive*/
 		{
+			/*printf("Directive: %s", symbol);*/
 			symbol = strtok(NULL, " \t\n");
 			if (dResult == 3) /*BYTE*/
 			{
+				int val = 0; /*hex ASCII number*/
 				int i = 2;
 				if (symbol[0] == 'C')
 				{
-					while (symbol[i] != 39)
+					while (symbol[i] != 39)/*hex ASCII value of each character*/
 					{
-						printf("%.2X", symbol[i++]);
+						sprintf(charBuffer, "%.2X", symbol[i++]);
+						strcat(wordBuffer, charBuffer);
 						recordLength++;
 					}
 				}
-				else if (symbol[0] == 'X')
+				else if (symbol[0] == 'X')/*hex directly*/
 				{
-					printf("\nT%.6X  ", adds[lCount]);
 					while (symbol[i] != 39)
 					{
-						printf("%C", symbol[i++]);
+						sprintf(charBuffer, "%C", symbol[i++]);
+						strcat(wordBuffer, charBuffer);
 						if (i % 2 == 0)
 						{
 							recordLength++;
 						}
 					}
 				}
+				adds[lCount] = -adds[lCount]; /*invert value to indicate it's a directive in need of printing*/
 			}
 			else if (dResult == 4) /*WORD*/
 			{
-				printf("%.6X", atoi(symbol));
+				sprintf(wordBuffer, "%.6X", atoi(symbol));
 				recordLength = recordLength + 3;
+				adds[lCount] = -adds[lCount]; /*invert value to indicate it's a directive in need of printing*/
 			}
-			adds[lCount] = -adds[lCount];
+			else /*one of the RES commands which needs to be flagged as a no print*/
+			{
+				adds[lCount] = 0; 
+			}
+			
 		}
 		else /*Instruction*/
 		{
 			/*printf("\nT%.6X ", adds[lCount]);
 			printf("  %s",getOpcode(symbol));*/
-			instruction = strtok(NULL, " \t\n");
-			if (instruction == NULL)
-			{
-				adds[lCount] = -1;
+			field3 = strtok(NULL, " \t\n");
+			if (strtok(NULL," \t\n") == NULL)/*line isn't being memset so it contains random garbage as another delimeter following the last delim that was read in by fgets*/
+			{/*this might create errors in some circumstances if that random garbage contains a delimeter such as from a previous line idk*/
+				field3 = NULL;/*absence of 3rd field detected; lookup address is 0000*/
 			}
 		}
-		if (adds[lCount] >= 0)
+		/*The line with the START directive is the special H record, this testing logic may be improved but is simply but in one place for now*/
+		if (lCount == 1) /*START line*/
 		{
-			printf("\nT%.6X%.2d%s%.4X", adds[lCount], recordLength, getOpcode(instruction), searchSymbol(symbol));
+			printf("\nH%s  %.6X%.6X", starter, startAddress, address - startAddress);
 		}
-		else
+		else if (adds[lCount] > 1) /*if it's an instruction*/
 		{
-			printf("\nT%.6X%.2d%s\n", -adds[lCount], recordLength, "BUFFER");
+			printf("\nT%.6X%.2d%s%.4X", adds[lCount], recordLength, getOpcode(symbol), searchSymbol(field3));
+			if (searchSymbol(field3) == 0)
+			{
+				adds[lCount] = 0; /*print T record but not an M record for RSUB*/
+			}
+		}	
+		else if(adds[lCount] < 0)/*if its a directive in need of printing; BYTE and WORD*/
+		{
+			printf("\nT%.6X%.2d%s", -adds[lCount], recordLength, wordBuffer); /*this is convention for not combining lines*/
+			memset(wordBuffer, '\0', 30 * sizeof(char)); /*clear wordBuffer*/
 		}
 	}
 	/*M records, skip lines flagged as uneccessary by -1*/
 	for (int k = 1; k < lCount; k++)
 	{
-		if (adds[k] < 0) { continue; }
-		printf("\nM%.6X04+%s", adds[k] + 1, starter);
+		if (adds[k] > 1)
+		{
+			printf("\nM%.6X04+%s", adds[k] + 1, starter);
+			/*printf(" for line %d", k);*/
+		}
 	}
 	/*fprintf(p2,"T%X %X %c %s%X", adds[i],3, getOpcode("JLT"),searchSymbol("SYMNAME"));*/
 	fclose(fp);

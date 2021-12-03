@@ -129,6 +129,7 @@ int searchSymbol(char *query)/*Searches for a given symbol by name and returns t
 		}
 	}
 	/*support for ,X at the end, which adds 8k hex to address*/
+	/*printf("\nsearching for symbol %s ", query);*/
 	int result = -1;
 	struct symNode* current = first;
 	while(current)

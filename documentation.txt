@@ -2,5 +2,5 @@ Documentation for the SIC XE Assembler, Project 4
 Due Dec 4
 Group: Marshall Lang
 
-Current version is the chopped up project2 debugging attempt, done in the effort to identify a segfault that I now realize is caused by attempting to use
-a null pointer returned by strtok in the event of a comment line.
+A couple small errors regarding M-records near an RSUB, otherwise a working SIC (non-XE) assembler.
+Current version is print-to-console which is easily changed.

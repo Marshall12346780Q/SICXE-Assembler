@@ -35,8 +35,8 @@ int main(int argc, char* argv[]) {
 			/*printf("Comment detected:%s\n", line);*/
 		}
 		else {/*if it's not a comment */
-			lineCount++; 
-			if (!(line[0] == ' ' || line[0] == '\t')) /*if it's not blank, strtok should parse*/
+			lineCount++; /*this should either be incremented with every line, or error codes should add #of comments to their linecount report for accurate error-line reporting*/
+			if (!(line[0] == ' ' || line[0] == '\t')) /*if it's not blank, there's a token in field 1 and strtok should parse*/
 			{
 				if (isSymbol(symbol) == 0 || isDirective(symbol) > 0) /*Check for invalid symbol names*/
 				{
@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
 					printf("Error: Duplicate Symbol %s on line %d", symbol, lineCount);
 					ERRORflag = 1;
 				}
-				if (startFlag == 0) 
+				if (startFlag == 0) /*this is where the start of the program is detected, could be used for the line-count thing*/
 				{
 					strcpy(starter, symbol);  
 					startFlag = 1; /*there is a need for a seperate variable because of comments*/
@@ -59,12 +59,11 @@ int main(int argc, char* argv[]) {
 					/*printf("%s\t%X\n",symbol,address);*/
 					addSymbol(symbol, address);
 				}
-				symbol = strtok(NULL, " \t\n");/*grab the next token*/
+				symbol = strtok(NULL, " \t\n");/*grab the next token, advancing to field 2*/
 			}
-			int dStat = isDirective(symbol);/*Directive Check Gang*/
+			int dStat = isDirective(symbol);
 			if (dStat >= 1)
 			{
-				/*printf("Directive Detected:'%s' ", symbol);*/
 				if (dStat == 1)/*START*/
 				{
 					if (!(lineCount == 1))
@@ -75,8 +74,7 @@ int main(int argc, char* argv[]) {
 					address = strtol(strtok(NULL, " \t\n"), &useless, 16); /*read in the address as base 16 and store it in address*/
 					addSymbol(starter, address);
 					startAddress = address;
-					adds[lineCount] = 0;
-					printf("START found at line: %d address set to %d", lineCount, adds[lineCount]);
+					adds[lineCount] = 0;/*the start directive stores it's address in startAddress and flags it's position in the adds array by setting its value to 0*/
 				}
 				else if (dStat == 2)
 				{
@@ -141,7 +139,7 @@ int main(int argc, char* argv[]) {
 				printf("Invalid Instruction:'%s' on line: %d\n", symbol, lineCount);
 				ERRORflag = 1;
 			}
-			else /*Valid instruction, this logic is a bit cringe and should be reworked to have valid case first*/
+			else /*Valid instruction; address offset will probably need to be changed in XE*/
 			{
 				address = address + 3;
 			}
@@ -149,7 +147,7 @@ int main(int argc, char* argv[]) {
 			/*memset(line, '\0', 1024*sizeof(char));
 			memset(symbol, '\0', 1024*sizeof(char));*/
 		}
-		while (symbol != NULL)
+		while (symbol != NULL) /*this isn't actually necessary*/
 		{
 			symbol = strtok(NULL, " \t\n"); /*flush strtok of the entire line*/
 		}
@@ -159,8 +157,7 @@ int main(int argc, char* argv[]) {
 	}
 	fclose(fp); /*PASS 1 COMPLETE Make sure all error cases close properly*/
 
-	printTable();
-	if (ERRORflag == 1) { return -1; }
+	if (ERRORflag == 1) { return -1; }/*maybe I shouldn't do this; errors should just quit program immediately?*/
 	int lCount = 0;
 	fp = fopen(argv[1], "r"); 
 	FILE* p2 = fopen(strcat(argv[1], ".objt"), "w"); /*open file for writing*/
@@ -176,17 +173,17 @@ int main(int argc, char* argv[]) {
 		{
 			continue; 
 		}
-		lCount++; /*only increment if not a comment*/
+		lCount++; /*only increment if not a comment, this will be changed*/
 		symbol = strtok(line, " \t\n");
-		if (!((line[0] == ' ') || (line[0] == '\t'))) /*First column is not empty*/
+		if (!((line[0] == ' ') || (line[0] == '\t'))) /*If field 1 is not empty, we'll need to advance to the next token to be sure we're getting field 2*/
 		{
 			symbol = strtok(NULL, " \t\n");
 		} 
 		int dResult = isDirective(symbol);
-		if (dResult > 0) /*Directive*/
+		if (dResult > 0) 
 		{
-			/*printf("Directive: %s", symbol);*/
-			symbol = strtok(NULL, " \t\n");
+			/*I could just identify the START line here*/
+			symbol = strtok(NULL, " \t\n");/*advance to field 3*/
 			if (dResult == 3) /*BYTE*/
 			{
 				int val = 0; /*hex ASCII number*/
@@ -216,7 +213,7 @@ int main(int argc, char* argv[]) {
 			}
 			else if (dResult == 4) /*WORD*/
 			{
-				sprintf(wordBuffer, "%.6X", atoi(symbol));
+				sprintf(wordBuffer, "%.6X", atoi(symbol));/*should be replaced with strtol, apparently*/
 				recordLength = recordLength + 3;
 				adds[lCount] = -adds[lCount]; /*invert value to indicate it's a directive in need of printing*/
 			}
@@ -236,7 +233,9 @@ int main(int argc, char* argv[]) {
 				field3 = NULL;/*absence of 3rd field detected; lookup address is 0000*/
 			}
 		}
-		/*The line with the START directive is the special H record, this testing logic may be improved but is simply but in one place for now*/
+		/*The line with the START directive is the special H record, this testing logic may be improved but is simply put in one place for now*/
+		/*lineCount should increment on every line in both passes for error reporting*/
+		/*adds[] should contain exclusively addresses. START will be identified here by lCount = startLine, a different variable created in pass1*/
 		if (lCount == 1) /*START line*/
 		{
 			printf("\nH%s  %.6X%.6X", starter, startAddress, address - startAddress);
@@ -251,7 +250,7 @@ int main(int argc, char* argv[]) {
 		}	
 		else if(adds[lCount] < 0)/*if its a directive in need of printing; BYTE and WORD*/
 		{
-			printf("\nT%.6X%.2d%s", -adds[lCount], recordLength, wordBuffer); /*this is convention for not combining lines*/
+			printf("\nT%.6X%.2d%s", -adds[lCount], recordLength, wordBuffer); /*this is convention when combining lines*/
 			memset(wordBuffer, '\0', 30 * sizeof(char)); /*clear wordBuffer*/
 		}
 	}
@@ -264,6 +263,8 @@ int main(int argc, char* argv[]) {
 			/*printf(" for line %d", k);*/
 		}
 	}
+	/*E Record*/
+	printf("\nE%.6X\n",startAddress);
 	/*fprintf(p2,"T%X %X %c %s%X", adds[i],3, getOpcode("JLT"),searchSymbol("SYMNAME"));*/
 	fclose(fp);
 	fclose(p2);

@@ -2,5 +2,12 @@ Documentation for the SIC XE Assembler, Project 4
 Due Dec 4
 Group: Marshall Lang
 
-A couple small errors regarding M-records near an RSUB, otherwise a working SIC (non-XE) assembler.
-Current version is print-to-console which is easily changed.
+-Removed profanities and anger in comments, development relics from project2 due night
+	-a disproportionate waste of time resulted from not understanding dynamic memory allocation and strtok properly. Attempting to 
+	'just make the program work' without due diligence in understanding concepts (which really weren't that difficult here)
+	is actually much harder. Issues were very preventable but I'm PMA. It was a lEaRnInG eXpErIeNcE
+-Added E Record
+
+
+This push mainly serves to store a version prior to upcoming improvements to line counting and handling of the H record that will 
+also fix M records to include the first line and omit last as it should.

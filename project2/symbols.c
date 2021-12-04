@@ -84,9 +84,9 @@ struct symNode {
 };
 struct symNode* first = NULL;
 
-void addSymbol(char *newSymbol, int newAddress)/*insert new node at beginning, we stackin*/
+void addSymbol(char *newSymbol, int newAddress)/*insert new node at beginning, a stack*/
 {
-	struct symNode* newNode = (struct symNode*)malloc(sizeof(struct symNode));/*only stores the space for one addition, damnit*/
+	struct symNode* newNode = (struct symNode*)malloc(sizeof(struct symNode));/*only stores the space for one addition*/
 	newNode->symbol = malloc(strlen(newSymbol)); //+1? i guess?
 	strcpy(newNode->symbol, newSymbol);
 	newNode->address = newAddress;
@@ -100,7 +100,7 @@ void addSymbol(char *newSymbol, int newAddress)/*insert new node at beginning, w
 	return;
 }
 
-void printTable()/*currently prints the stuff in reverse order but who actually cares mate*/
+void printTable()/*print symbol table in reverse order*/
 {
 	struct symNode* iterator = first;
 	while (iterator)

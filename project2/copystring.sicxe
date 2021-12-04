@@ -1,0 +1,16 @@
+#
+# SICXE Version of Copystring Program
+#
+#
+TEST    START   4000
+SRC     BYTE    C'TEST STRING'
+ZERO    WORD    0
+DST     RESB    11
+ELEVEN  WORD    11
+LOOP    LDX     ZERO
+        LDCH    SRC,X
+        STCH    DST,X
+        TIX     ELEVEN
+        JLT     LOOP
+	J	FIN
+FIN     END     LOOP

@@ -1,0 +1,11 @@
+Documentation for the SIC XE Assembler, Project 4
+Due Dec 4
+Group: Marshall Lang
+
+-Pass 1 of the XE is largely complete though it will benefit from more error checking for too many/not enough arguments
+-Pass 2 formats 1 and 2 are complete (with debugging jargon)
+-Pass 4 is started
+
+Significant progress in the XE assembler has been made.
+I understand how the XE object code is to be generated, the implementation will follow soon.
+Currently everything is still printed to console for easier debugging.

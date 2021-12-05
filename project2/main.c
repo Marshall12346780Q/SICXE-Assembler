@@ -3,6 +3,8 @@
 int main(int argc, char* argv[]) {
 	FILE* fp;
 	int adds[1000];
+	char formats[1000]; /*flag formats of instructions*/
+	memset(formats, 0, 1000 * sizeof(char));
 	char line[1024];
 	char* symbol;
 	char name[7];
@@ -22,13 +24,13 @@ int main(int argc, char* argv[]) {
 	while (fgets(line, 1024, fp) != NULL)/*read line by line until end of file*/
 	{
 		lCount++; /*detect more errors? check against test files*/
-		if (address > 32768)
+		if (address > 1048576)
 		{
-			printf("ERROR: MEMORY OVERFLOW- SIC supports up to 32K of memory, or 8000 in hex");
+			printf("ERROR: MEMORY OVERFLOW- SICXE supports up to 1MB of memory, or 100,000 in hex, %d", address);
 			ERRORflag = 1;
 		}
 		adds[lCount] = address;
-		symbol = strtok(line, " \t\n");
+		symbol = strtok(line, " \t\n\r");
 		if (line[0] == 35)/*If its a comment, don't do anything*/
 		{
 			/*printf("Comment detected:%s\n", line);*/
@@ -55,7 +57,7 @@ int main(int argc, char* argv[]) {
 				{
 					addSymbol(symbol, address);
 				}
-				symbol = strtok(NULL, " \t\n");/*grab the next token, advancing to field 2*/
+				symbol = strtok(NULL, " \t\n\r");/*grab the next token, advancing to field 2*/
 			}
 			int dStat = isDirective(symbol);
 			if (dStat >= 1)
@@ -68,7 +70,7 @@ int main(int argc, char* argv[]) {
 					}*/
 
 					char* useless;
-					address = strtol(strtok(NULL, " \t\n"), &useless, 16); /*read in the address as base 16 and store it in address*/
+					address = strtol(strtok(NULL, " \t\n\r"), &useless, 16); /*read in the address as base 16 and store it in address*/
 					addSymbol(name, address); 
 					startLine = lCount;
 					adds[startLine] = address;
@@ -79,7 +81,7 @@ int main(int argc, char* argv[]) {
 				}
 				else if (dStat == 3)
 				{/*generate char or hex constant using as many bytes as needed*/
-					symbol = strtok(NULL, " \t\n");
+					symbol = strtok(NULL, " \t\n\r");
 					if (symbol[0] == 'C')
 					{
 						int i = 2;
@@ -131,14 +133,47 @@ int main(int argc, char* argv[]) {
 				}
 
 			}
-			else if (getOpcode(symbol) == "0")/*Neither directive nor instruction*/
+			else if (!((strcmp(getF1Opcode(symbol), "00")) == 0))/*Format 1*/
+			{
+				/*printf("\nFormat 1 instruction: %s Opcode: %s", symbol, getF1Opcode(symbol));*/
+				address = address + 1;
+				formats[lCount] = 1; /*INT_MIN i just don't want to import limits.h. This flags this line as a format juan*/
+			}
+			else if (!((strcmp(getF2Opcode(symbol), "00")) == 0))/*Format 2*/
+			{
+				/*printf("\nFormat 2 instruction: %s Opcode: %s", symbol, getF2Opcode(symbol));*/
+				address = address + 2;
+				formats[lCount] = 2;
+			}
+			else if (symbol[0] == 43)/*A plus sign is detected, indicating this is a format 4*/
+			{
+				int i = 1;
+				do  /*remove the + from the symbol, could probably be done more cleanly*/
+				{
+					/*printf("\n%c replaced with %c\n", symbol[i - 1], symbol[i]);*/
+					symbol[i - 1] = symbol[i];
+					i++;
+				} while (symbol[i-1] != '\0');
+				symbol[i] = '\0';
+				if (getOpcode(symbol) == "0")/*getOpcode needs to have XE instructions added*/
+				{
+					printf("Invalid Instruction:'%s' on line: %d\n", symbol, lCount);
+					ERRORflag = 1;
+				}
+				/*printf("\nFormat 4 instruction: %s Opcode: %s", symbol, getOpcode(symbol));*/
+				address = address + 4;
+				formats[lCount] = 4;
+			}
+			else if (!(getOpcode(symbol) == "0"))/*Valid format 3*/
+			{
+				/*printf("\nFormat 3 instruction: %s Opcode: %s", symbol, getOpcode(symbol));*/
+				address = address + 3;
+				formats[lCount] = 3;
+			}
+			else /*Invalid Instruction*/
 			{
 				printf("Invalid Instruction:'%s' on line: %d\n", symbol, lCount);
 				ERRORflag = 1;
-			}
-			else /*Valid instruction; address offset will probably need to be changed in XE*/
-			{
-				address = address + 3;
 			}
 			/*printf("line:%d address: %X\n", lCount, address);*/
 			/*memset(line, '\0', 1024*sizeof(char));
@@ -146,7 +181,7 @@ int main(int argc, char* argv[]) {
 		}
 		while (symbol != NULL) /*this isn't actually necessary*/
 		{
-			symbol = strtok(NULL, " \t\n"); /*flush strtok of the entire line*/
+			symbol = strtok(NULL, " \t\n\r"); /*flush strtok of the entire line*/
 		}
 		/*wipe line and symbol before running again. This might not be necessary idk*/
 		/*memset(line, '\0', 1024 * sizeof(char));
@@ -171,15 +206,15 @@ int main(int argc, char* argv[]) {
 		{
 			continue; 
 		}
-		symbol = strtok(line, " \t\n");
+		symbol = strtok(line, " \t\n\r");
 		if (!((line[0] == ' ') || (line[0] == '\t'))) /*If field 1 is not empty, we'll need to advance to the next token to be sure we're getting field 2*/
 		{
-			symbol = strtok(NULL, " \t\n");
+			symbol = strtok(NULL, " \t\n\r");
 		} 
 		int dResult = isDirective(symbol);
-		if (dResult > 0) 
+		if (dResult > 0) /*needs updating to SICXE*/
 		{
-			symbol = strtok(NULL, " \t\n");/*advance to field 3*/
+			symbol = strtok(NULL, " \t\n\r");/*advance to field 3*/
 			if (dResult == 1) /*START*/
 			{
 				/*do nothing, this is simply used to prevent adds index from becoming 0*/
@@ -227,15 +262,45 @@ int main(int argc, char* argv[]) {
 		{
 			/*printf("\nT%.6X ", adds[lCount]);
 			printf("  %s",getOpcode(symbol));*/
-			field3 = strtok(NULL, " \t\n");
-			if (strtok(NULL," \t\n") == NULL)/*line isn't being memset so it contains random garbage as another delimeter following the last delim that was read in by fgets*/
-			{/*this might create errors in some circumstances if that random garbage contains a delimeter such as from a previous line idk*/
-				field3 = NULL;/*absence of 3rd field detected; lookup address is 0000*/
+			field3 = strtok(NULL, " ,\t\n\r");
+			/*now that I parse carriage return properly, the logic that was here before is destructive*/
+
+			/*the formats array is a bit unneeded since I run the searching methods again anyway but you know*/
+			if (formats[lCount] == 1)/*Format1 just prints it's opcode, which is tested and found with a method from symbols*/
+			{
+				printf("\nLine %d is format 1 op:%s|",lCount,symbol);
+				printf("%2s", getF1Opcode(symbol));
 			}
+			else if (formats[lCount] == 2)/*Format 2 instructions simply print their opcode followed by the register number of each register*/
+			{
+				printf("\nLine %d is format 2 op:%s %s|", lCount,symbol,field3); 
+				int r1Code = getRegisterCode(field3);
+				char* field4 = strtok(NULL, " ,\t\n\r"); /*must be stored for error checking reasons. These checks should really be in pass1 but w/e for now*/
+				int r2Code = getRegisterCode(field4); /*hopefully this can pass null and be fine*/
+				if (r1Code == -1){printf("Error: Invalid register name '%s', on line %d", field3, lCount);}
+				if (r2Code == -1) {printf("Error: Invalid register name '%s', on line %d", field4, lCount); }
+				/*should print the corresponding register numbers according to the specification. no r2 means its 0 according to example*/
+				printf("%s%d%d", getF2Opcode(symbol), r1Code, r2Code);
+			}
+			else if(formats[lCount] == 3)/*Formats 3 does some stuff based on size of operand, the flags, and the decision the assembler must make between PC and Base relative*/
+			{
+
+				printf("\nLine %d is format 3", lCount);
+			}	
+			else if (formats[lCount] == 4)/*Format 4 is always indicated by a plus, and then no flag, trailing X, @, or #*/
+			{
+				printf("\nLine %d is format 4", lCount);
+				if()/*leading @ means indirect*/
+				else if()/*leading # means immediate*/
+				else if()/*trailing X means indexed*/
+				else() /*no flag means simple*/
+			}
+			
+
+			
+		
 		}
-		/*The line with the START directive is the special H record, this testing logic may be improved but is simply put in one place for now*/
-		/*Currently, there is an issue regarding the fact that adds[startLine] is used to store the address of the program*/
-		/*But the printing logic relies on non-printing T-records to be 0*/
+		/*The following code block is a deprecated non-XE print system, at least for instructions*/
 		if (lCount == startLine) /*START line*/
 		{
 			printf("\nH%s  %.6X%.6X", name, adds[startLine], address - adds[startLine]);
@@ -247,7 +312,7 @@ int main(int argc, char* argv[]) {
 			{
 				adds[lCount] = 0; /*print T record but not an M record for RSUB*/
 			}
-		}	
+		}
 		else if(adds[lCount] < 0)/*if its a directive in need of printing; BYTE and WORD*/
 		{
 			printf("\nT%.6X%.2d%s", -adds[lCount], recordLength, wordBuffer); /*this is convention when not combining lines*/
@@ -255,6 +320,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	/*M records, skip lines flagged as uneccessary by -1*/
+	/*M records are now only needed by format 4 instructions pog*/
 	int checkedRecords = 0;
 	for (int k = startLine+1; k < lCount; k++)
 	{

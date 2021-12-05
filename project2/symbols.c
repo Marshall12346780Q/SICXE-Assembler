@@ -60,12 +60,73 @@ char* opcodes[][2] = {
 	{"TIO","F8"},
 	{"TIX", "2C"},
 	{"TIXR", "B8"},
-	{"WD", "DC"},
+	{"WD", "DC"},/*below here is XE (format 3/4)*/
+	{"ADDF","58"},
+	{"COMPF", "28"},
+	{"DIVF", "64"},
+	{"LDB", "68"},
+	{"LDF", "70"},
+	{"LDS", "6C"},
+	{"LDT", "74"},
+	{"LPS", "D0"},
+	{"MULF", "60"},
+	{"SSK", "EC"},
+	{"STB", "78"},
+	{"STF", "80"},
+	{"STI", "D4"},
+	{"STS", "7C"},
+	{"STT", "84"},
+	{"SUBF", "5C"},
 	{"\0","\0"}
 };	
 
+
+int getRegisterCode(char* r) /*returns the int value corresponding to the register name, or -1 if not found*/
+{/*I thought about simply using the first char since this is sufficient to distinguish, but I need to be able to check for invalid register names*/
+	int result = -1;
+	if (r == NULL) { result = 0; } /*this seems a bit weird but it follows example. Potential error uncaught:when leaving out second register of a two-register instruction*/
+	else if (strcmp("A", r) == 0) { result = 0; }
+	else if (strcmp("X", r) == 0) { result = 1; }
+	else if (strcmp("L", r) == 0) { result = 2; }
+	else if (strcmp("B", r) == 0) { result = 3; }
+	else if (strcmp("S", r) == 0) { result = 4; }
+	else if (strcmp("T", r) == 0) { result = 5; }
+	else if (strcmp("F", r) == 0) { result = 6; }
+	else if (strcmp("PC", r) == 0) { result = 8; }
+	else if (strcmp("SW", r) == 0) { result = 9; }
+	return result;
+}
+char* getF1Opcode(char* instruction) {/*If instruction is of format 1, returns opcode, otherwise 0*/
+	/*it will have a newline character?*/
+	char* result = "00";
+	/*printf("\nchecking value for f1: |%d|", instruction[3]); a little ghost hunting, son of a bitch*/
+	if (strcmp("FIX", instruction) == 0){result = "C4"; }
+	else if (strcmp("FLOAT", instruction) == 0) { result = "C0"; }
+	else if (strcmp("HIO", instruction) == 0) { result = "F4"; }
+	else if (strcmp("NORM", instruction) == 0) { result = "C8"; }
+	else if (strcmp("SIO", instruction) == 0) { result = "FO"; }
+	else if (strcmp("TIO", instruction) == 0) { result = "F8"; }
+	return result;
+}
+char* getF2Opcode(char* instruction) {/*If instruction is of format 2, returns opcode, otherwise 0*/
+	char* result = "00";
+	if (strcmp("ADDR", instruction) == 0) { result = "90"; }
+	else if (strcmp("CLEAR", instruction) == 0) { result = "B4"; }
+	else if (strcmp("COMPR", instruction) == 0) { result = "A0"; }
+	else if (strcmp("DIVR", instruction) == 0) { result = "9C"; }
+	else if (strcmp("MULR", instruction) == 0) { result = "98"; }
+	else if (strcmp("RMO", instruction) == 0) { result = "AC"; }
+	else if (strcmp("SHIFTL", instruction) == 0) { result = "A4"; }
+	else if (strcmp("SHIFTR", instruction) == 0) { result = "A8"; }
+	else if (strcmp("SUBR", instruction) == 0) { result = "94"; }
+	else if (strcmp("SVC", instruction) == 0) { result = "B0"; }
+	else if (strcmp("TIXR", instruction) == 0) { result = "B8"; }
+	return result;
+}
+
 char* getOpcode(char* instruction){ /*Accepts instruction, returns opcode or "0" if not found*/
 	int i = 0;/*can be improved by converting string to a number value so it only has to compare once and no strcmp, use binarySearch etc etc*/
+	/*I think this generated a segFault once under current implementation and then never again.. watch out for this*/
 	while(!(strcmp(opcodes[i][0],instruction) == 0))
 	{
 		i++;

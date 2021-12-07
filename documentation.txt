@@ -2,7 +2,6 @@ Documentation for the SIC XE Assembler, Project 4
 Due Presentation Day
 Group: Marshall Lang
 
-All formats printing is finished, with minor debugging jargon to remove.
-M records are finished
-Needs to print to file
-Needs a code review for error handling
+Prints to file, debugging outputs removed.
+'Finished' but could certainly use a code review for 
+error handling.

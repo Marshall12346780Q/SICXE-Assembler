@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
 			{
 				/*printf("\nFormat 1 instruction: %s Opcode: %s", symbol, getF1Opcode(symbol));*/
 				address = address + 1;
-				formats[lCount] = 1; /*INT_MIN i just don't want to import limits.h. This flags this line as a format juan*/
+				formats[lCount] = 1; 
 			}
 			else if (!((strcmp(getF2Opcode(symbol), "00")) == 0))/*Format 2*/
 			{
@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
 					i++;
 				} while (symbol[i-1] != '\0');
 				symbol[i] = '\0';
-				if (getOpcode(symbol) == "0")/*getOpcode needs to have XE instructions added*/
+				if (getOpcode(symbol) == "0")
 				{
 					printf("Invalid Instruction:'%s' on line: %d\n", symbol, lCount);
 					ERRORflag = 1;
@@ -189,16 +189,16 @@ int main(int argc, char* argv[]) {
 		{
 			symbol = strtok(NULL, " \t\n\r"); /*flush strtok of the entire line*/
 		}
-		/*wipe line and symbol before running again. This might not be necessary idk*/
+		/*wipe line and symbol before running again. /
 		/*memset(line, '\0', 1024 * sizeof(char));
 		memset(symbol, '\0', 7 * sizeof(char));*/
 	}
 	fclose(fp); /*PASS 1 COMPLETE Make sure all error cases close properly*/
-	printTable();
+	
 	if (ERRORflag == 1) { return -1; }/*maybe I shouldn't do this; errors should just quit program immediately?*/
 	lCount = 0;
 	fp = fopen(argv[1], "r"); 
-	FILE* p2 = fopen(strcat(argv[1], ".objt"), "w"); /*open file for writing*/
+	FILE* p2 = fopen(strcat(argv[1], ".obj"), "w"); /*open file for writing*/
 	int recordLength;
 	memset(line, '\0', 1024 * sizeof(char)); 
 	char* field3; 
@@ -218,7 +218,7 @@ int main(int argc, char* argv[]) {
 			symbol = strtok(NULL, " \t\n\r");
 		} 
 		int dResult = isDirective(symbol);
-		if (dResult > 0) /*needs updating to SICXE*/
+		if (dResult > 0) 
 		{
 			symbol = strtok(NULL, " \t\n\r");/*advance to field 3*/
 			if (dResult == 1) /*START*/
@@ -276,23 +276,23 @@ int main(int argc, char* argv[]) {
 
 			if (formats[lCount] == 1)/*Format1 just prints it's opcode, which is tested and found with a method from symbols*/
 			{
-				printf("\nLine %d is format 1 op:%s|",lCount,symbol);
-				printf("%2s", getF1Opcode(symbol));
+				fprintf(p2,"\nT%X1",adds[lCount]);
+				fprintf(p2,"%2s", getF1Opcode(symbol));
 			}
 			else if (formats[lCount] == 2)/*Format 2 instructions simply print their opcode followed by the register number of each register*/
 			{
-				printf("\nLine %d is format 2 op:%s %s|", lCount,symbol,field3); 
+				fprintf(p2,"\nT%X2", adds[lCount]); 
 				int r1Code = getRegisterCode(field3);
 				char* field4 = strtok(NULL, " ,\t\n\r"); /*must be stored for error checking reasons. These checks should really be in pass1 but w/e for now*/
 				int r2Code = getRegisterCode(field4); /*hopefully this can pass null and be fine*/
 				if (r1Code == -1){printf("Error: Invalid register name '%s', on line %d", field3, lCount);}
 				if (r2Code == -1) {printf("Error: Invalid register name '%s', on line %d", field4, lCount); }
 				/*should print the corresponding register numbers according to the specification. no r2 means its 0 according to example*/
-				printf("%s%d%d", getF2Opcode(symbol), r1Code, r2Code);
+				fprintf(p2,"%s%d%d", getF2Opcode(symbol), r1Code, r2Code);
 			}
 			else if(formats[lCount] == 3)/*Format 3 does some stuff based on size of operand, the flags, and the decision the assembler must make between PC and Base relative*/
 			{/*Note that format 3 always prints the displacement in its final 12 bit field as opposed to 4's 20 bit*/
-				printf("\nLine %d is format 3 ", lCount);
+				fprintf(p2,"\nT%X3", adds[lCount]);
 				int pOp = strtol(getOpcode(symbol),NULL,16); /*print Opcode, as an int for flagging*/
 				char* indexed = strtok(NULL, " ,\t\n\r");
 				if (indexed != NULL) /*Check for Null first to prevent a segFault. Note that there are no two operand format 3's. A comma will always indicate indexed here*/
@@ -302,32 +302,31 @@ int main(int argc, char* argv[]) {
 						TACalc(field3, adds[lCount]);
 						int pAdd = strtol(field3, NULL, 16);
 						pAdd ^= 0x8000; 
-						printf("indexed %X|%.4X", pOp + 3, pAdd); 
+						fprintf(p2,"%X%.4X", pOp + 3, pAdd); 
 					}
 				}
 				else if (field3[0] == 64)/*INDIRECT: remove @, lookup symbol address from table, TA Calc, flag n*/
 				{ 
 					removeFirstChar(field3);
 					TACalc(field3, adds[lCount]);
-					printf("indirect %.2X|%s",pOp+2, field3);
+					fprintf(p2,"%.2X%s",pOp+2, field3);
 				}
 				else if (field3[0] == 35)/*IMMEDIATE: remove #, read symbol as address in decimal,*/
 				{
 					removeFirstChar(field3);
 					TACalc(field3, adds[lCount]);
-					printf("immediate %.2X|%s", pOp+1, field3);
+					fprintf(p2,"%.2X%s", pOp+1, field3);
 				}
-				else/*SIMPLE: look up symbol address from table, flip n&i. Hope this doesn't let in errors*/
+				else/*SIMPLE: look up symbol address from table, flip n&i.*/
 				{
 					TACalc(field3, adds[lCount]);/*can also return as int for standard flagging process*/
-					printf("simple %.2X|%s", pOp+3,field3);
+					fprintf(p2,"%.2X%s", pOp+3,field3);
 				}
-
 			}	
 			else if (formats[lCount] == 4)/*Format 4 is always indicated by a plus, and then no flag, trailing X, @, or #*/
 			{
 				removeFirstChar(symbol);
-				printf("\nLine %d is format 4 op: %s operand: %s| ", lCount,symbol,field3);
+				fprintf("p2,\nT%X4", adds[lCount]);
 				int pOp = strtol(getOpcode(symbol), NULL, 16);
 				char* indexed = strtok(NULL, " ,\t\n\r");
 				if (indexed != NULL) /*Check for Null first to prevent a segFault. Note that there are no two operand format 4's. A comma will always indicate indexed here*/
@@ -337,7 +336,7 @@ int main(int argc, char* argv[]) {
 						int pAdd = searchSymbol(field3);
 						pAdd ^= 0x800000; /*x*/
 						pAdd ^= 0x100000; /*e*/
-						printf("%X%.6X", pOp+ 3,pAdd); /*adding 3 to first byte flips n and i*/
+						fprintf(p2,"%X%.6X", pOp+ 3,pAdd); /*adding 3 to first byte flips n and i*/
 					}
 				}
 				else if (field3[0] == 64)/*INDIRECT: remove @, lookup symbol address from table, flip n&e*/
@@ -345,7 +344,7 @@ int main(int argc, char* argv[]) {
 					removeFirstChar(field3);
 					int pAdd = searchSymbol(field3);
 					pAdd ^= 0x100000;
-					printf("%X%.6X", pOp + 1, pAdd);
+					fprintf(p2,"%X%.6X", pOp + 1, pAdd);
 
 				}
 				else if (field3[0] == 35)/*IMMEDIATE: remove #, read symbol as address in decimal, flip i&e bit*/
@@ -353,40 +352,39 @@ int main(int argc, char* argv[]) {
 					removeFirstChar(field3);
 					int pAdd = atoi(field3);/*returns 0 if it's not an int, but might actually want constant 0*/
 					pAdd ^= 0x100000; /*getOpcode is a string in hex, field3 is a string in decimal*/
-					printf("%X%.6X", pOp +1,pAdd); /*adding 1 flips the i bit in 1st byte, eMask flips e in remaining 3bytes which contains address*/
+					fprintf(p2,"%X%.6X", pOp +1,pAdd); /*adding 1 flips the i bit in 1st byte, eMask flips e in remaining 3bytes which contains address*/
 					/*printf("address BE: %X", atoi(field3));*/
 				}
 				else/*SIMPLE: look up symbol address from table, flip n&i&e*/
 				{
 					int pAdd = searchSymbol(field3);
 					pAdd ^= 0x100000;
-					printf("%X%.6X", pOp + 3, pAdd);/*adding 3 flips both n and i appropriate, eMask flips e*/
+					fprintf(p2,"%X%.6X", pOp + 3, pAdd);/*adding 3 flips both n and i appropriate, eMask flips e*/
 				}/*these options could definitely have a method for less repeated code*/
 			}		
 		}
-		/*The following code block is a deprecated non-XE print system, at least for instructions*/
 		if (lCount == startLine) /*START line*/
 		{
-			printf("\nH%s  %.6X%.6X", name, adds[startLine], address - adds[startLine]);
+			fprintf(p2,"H%s  %.6X%.6X", name, adds[startLine], address - adds[startLine]);
 		}
 		else if(adds[lCount] < 0)/*if its a directive in need of printing; BYTE and WORD*/
 		{
-			printf("\nT%.6X%.2d%s", -adds[lCount], recordLength, wordBuffer); /*this is convention when not combining lines*/
+			fprintf(p2,"\nT%.6X%.2d%s", -adds[lCount], recordLength, wordBuffer); /*this is convention when not combining lines*/
 			memset(wordBuffer, '\0', 30 * sizeof(char)); /*clear wordBuffer*/
 		}
 	}
 	/*M records, skip lines flagged as uneccessary by -1*/
-	/*M records are now only needed by format 4 instructions pog*/
+	/*M records are now only needed by format 4 instructions*/
 	for (int k = startLine+1; k < lCount; k++)
 	{
 		if (formats[k] == 4)
 		{
-			printf("\nM%.6X04+%s", adds[k] + 1, name);
+			fprintf(p2,"\nM%.6X04+%s", adds[k] + 1, name);
 			/*printf(" for line %d", k);*/
 		}
 	}
 	/*E Record*/
-	printf("\nE%.6X\n",adds[startLine]);
+	fprintf(p2,"\nE%.6X\n",adds[startLine]);
 	/*fprintf(p2,"T%X %X %c %s%X", adds[i],3, getOpcode("JLT"),searchSymbol("SYMNAME"));*/
 	fclose(fp);
 	fclose(p2);
@@ -416,7 +414,6 @@ int TACalc(char* f3, int currentAddress)/*Target Address calculator from field3,
 		{
 			baseDisp = baseDisp & 0xFFF;
 			baseDisp ^= 0x4000;
-			printf("BASE-relative case. BASE value: %X address: %X disp: %X", b, add, baseDisp);
 			sprintf(f3, "%4X", baseDisp);
 		}
 		else /*Can't be reached*/

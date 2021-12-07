@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 
-int TACalc(int add);
+int TACalc(char* f3, int currentAddress);
 void removeFirstChar(char c[]);
 void addSymbol(char *newSymbol, int newAddress);
 void printTable();

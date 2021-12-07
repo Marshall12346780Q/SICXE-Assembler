@@ -1,5 +1,7 @@
 #include "headers.h" 
 
+
+int b = 0; /*storing the contents of the base register is necessary for base-relative addressing*/
 int main(int argc, char* argv[]) {
 	FILE* fp;
 	int adds[1000];
@@ -131,6 +133,10 @@ int main(int argc, char* argv[]) {
 				{
 					address = address + 3;
 				}
+				else if (dStat == 9)/*the BASE directive takes up no space, but assigns a value to register B that should be noted for base addressing*/
+				{
+					
+				}
 
 			}
 			else if (!((strcmp(getF1Opcode(symbol), "00")) == 0))/*Format 1*/
@@ -252,11 +258,15 @@ int main(int argc, char* argv[]) {
 				recordLength = recordLength + 3;
 				adds[lCount] = -adds[lCount]; /*invert value to indicate it's a directive in need of printing*/
 			}
+			else if (dResult == 9)/*BASE*/
+			{/*sets register b to the address of the symbol*/
+				b = searchSymbol(symbol);
+				/*printf("BASE recognized, stored: %X", b);*/
+			}
 			else /*one of the RES commands which needs to be flagged as a no print*/
 			{
 				adds[lCount] = 0; 
 			}
-			
 		}
 		else /*Instruction*/
 		{
@@ -265,7 +275,6 @@ int main(int argc, char* argv[]) {
 			printf("  %s",getOpcode(symbol));*/
 			field3 = strtok(NULL, " ,\t\n\r");
 
-			/*the formats array is a bit unneeded since I run the searching methods again anyway but you know*/
 			if (formats[lCount] == 1)/*Format1 just prints it's opcode, which is tested and found with a method from symbols*/
 			{
 				printf("\nLine %d is format 1 op:%s|",lCount,symbol);
@@ -300,18 +309,18 @@ int main(int argc, char* argv[]) {
 				{ 
 					removeFirstChar(field3);
 					int pAdd = searchSymbol(field3);
-					TACalc(field3);
+					TACalc(field3, adds[lCount]);
 				}
 				else if (field3[0] == 35)/*IMMEDIATE: remove #, read symbol as address in decimal,...*/
 				{
 					removeFirstChar(field3);
 					int pAdd = atoi(field3);
-					TACalc(field3);
+					TACalc(field3, adds[lCount]);
 				}
 				else/*SIMPLE: look up symbol address from table, flip n&i&e. Hope this doesn't let in errors*/
 				{
 					int pAdd = searchSymbol(field3);
-					TACalc(field3);
+					TACalc(field3, adds[lCount]);
 				}
 
 			}	
@@ -353,11 +362,7 @@ int main(int argc, char* argv[]) {
 					pAdd ^= eMask;
 					printf("%X%.6X", strtol(pOp, NULL, 16) + 3, pAdd);/*adding 3 flips both n and i appropriate, eMask flips e*/
 				}/*these options could definitely have a method for less repeated code*/
-			}
-			
-
-			
-		
+			}		
 		}
 		/*The following code block is a deprecated non-XE print system, at least for instructions*/
 		if (lCount == startLine) /*START line*/
@@ -396,4 +401,32 @@ int main(int argc, char* argv[]) {
 	fclose(fp);
 	fclose(p2);
 }
-	
+int TACalc(char* f3, int currentAddress)/*Target Address calculator from field3*/
+{
+	int iConst = atoi(f3);/*atoi returns 0 if f3 is not an int at all (is a symbol, which is quite common)*/
+	int add;
+	if (iConst == 0) /*the m case where field3 is a symbol*/
+	{
+		/*if PC-2048 or PC +2047 can reach the address, use PC*/
+		add = searchSymbol(f3);
+		int PCdisp = add - (currentAddress + 3);/*we know its a format 3 instruction so we can add 3 bytes to get PC, example supports this even for directives on next line*/
+		int baseDisp = add - b;
+		if (PCdisp >= -2048 && PCdisp <= 2047)
+		{
+			printf("PC-relative case. PC value: %X address: %X disp: %X", currentAddress+3, add, PCdisp);
+		}
+		else if (baseDisp >= 0 && baseDisp <= 4095)/*else if BASE+4095 can reach the address, use BASE*/
+		{
+			printf("BASE-relative case. BASE value: %X address: %X disp: %X", b, add, baseDisp);
+		}
+		else /*Can't be reached*/
+		{
+			printf("Memory address %X can't be reached. Use a format 4 instruction or a different BASE register value",add);
+			return -1;
+		}
+	}
+	else if (iConst <= 4095) /*the c case, where field3 is a constant less than or eq 4095*/
+	{
+		return iConst;
+	}
+}

@@ -80,21 +80,6 @@ char* opcodes[][2] = {
 	{"\0","\0"}
 };	
 
-
-
-void TACalc(int add)/*Target Address calculator from address in assembly*/
-{
-	if (add <= 4095) /*'c' case*/
-	{
-		return add; /*displacement is difference between current and target, I'm pretty sure, maybe?*/
-	}
-	else/*'m' case*/
-	{
-		/*if disp is between -2048 and 2047 inclusive, PC relative is used*/
-
-		/*if disp is between 0 and 4095 inclusive, base relative is used*/
-	}
-}
 void removeFirstChar(char c[])/*Removes the first character of a char array in it's calling function (pass by ref)*/
 {
 	int i = 0;
@@ -268,5 +253,6 @@ int isDirective(char *testString) /*0 if not directive, 1-8 if corresponding dir
 	else if(strcmp(testString, "RESW")==0){result = 6;}
 	else if(strcmp(testString, "RESR")==0){result = 7;}
 	else if(strcmp(testString, "EXPORTS")==0){result = 8;}
+	else if (strcmp(testString, "BASE") == 0) {result = 9;}
 	return result;
 }

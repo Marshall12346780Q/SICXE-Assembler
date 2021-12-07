@@ -81,6 +81,29 @@ char* opcodes[][2] = {
 };	
 
 
+
+void TACalc(int add)/*Target Address calculator from address in assembly*/
+{
+	if (add <= 4095) /*'c' case*/
+	{
+		return add; /*displacement is difference between current and target, I'm pretty sure, maybe?*/
+	}
+	else/*'m' case*/
+	{
+		/*if disp is between -2048 and 2047 inclusive, PC relative is used*/
+
+		/*if disp is between 0 and 4095 inclusive, base relative is used*/
+	}
+}
+void removeFirstChar(char c[])/*Removes the first character of a char array in it's calling function (pass by ref)*/
+{
+	int i = 0;
+	while (c[i] != '\0') 
+	{
+		c[i] = c[i + 1];
+		i++;
+	}
+}
 int getRegisterCode(char* r) /*returns the int value corresponding to the register name, or -1 if not found*/
 {/*I thought about simply using the first char since this is sufficient to distinguish, but I need to be able to check for invalid register names*/
 	int result = -1;

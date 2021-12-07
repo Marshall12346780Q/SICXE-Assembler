@@ -1,15 +1,10 @@
 Documentation for the SIC XE Assembler, Project 4
-Due Dec 4
+Due Presentation Day
 Group: Marshall Lang
 
--Pass 1 of the XE is largely complete though it will benefit from more error checking for too many/not enough arguments
--Pass 2 formats 1 and 2 are complete (with debugging jargon)
--Pass 4 is started
-
-Indirect Addressing..
-I spent a lot of time trying to figure out how I might actually go about retreiving the word
-stored at the specified memory address for the purposes of index addressing.. wouldn't I practically
-need to build a VM to access memory like that? 
-Then I realized that it's not the assembler's concern how the TA is used, what is done with the TA, it just needs to 
-find what the TA is and spit it out. That makes things much easier and explains why the example I studied in the object
-file format document didnt seem to care about the value stored in the TA; it just needs to calculate the TA.
+Cleaned up format 4 code, made progress into format 3 and planned its completion;
+the logic is diagrammed for the cases properly.
+Next I'll take care of the M records (only needed for format 4's?) and make sure the
+program can assemble SIC (the file extension can be used to determine the output)
+Then clean up some more code and make sure errors are covered.I mainly just wanted to
+commit before starting the drive home.

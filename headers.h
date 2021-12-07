@@ -3,6 +3,8 @@
 #include <string.h>
 #include <math.h>
 
+int TACalc(int add);
+void removeFirstChar(char c[]);
 void addSymbol(char *newSymbol, int newAddress);
 void printTable();
 int searchSymbol(char *query);

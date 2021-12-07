@@ -264,7 +264,6 @@ int main(int argc, char* argv[]) {
 			/*printf("\nT%.6X ", adds[lCount]);
 			printf("  %s",getOpcode(symbol));*/
 			field3 = strtok(NULL, " ,\t\n\r");
-			/*now that I parse carriage return properly, the logic that was here before is destructive*/
 
 			/*the formats array is a bit unneeded since I run the searching methods again anyway but you know*/
 			if (formats[lCount] == 1)/*Format1 just prints it's opcode, which is tested and found with a method from symbols*/
@@ -283,58 +282,77 @@ int main(int argc, char* argv[]) {
 				/*should print the corresponding register numbers according to the specification. no r2 means its 0 according to example*/
 				printf("%s%d%d", getF2Opcode(symbol), r1Code, r2Code);
 			}
-			else if(formats[lCount] == 3)/*Formats 3 does some stuff based on size of operand, the flags, and the decision the assembler must make between PC and Base relative*/
-			{
-
+			else if(formats[lCount] == 3)/*Format 3 does some stuff based on size of operand, the flags, and the decision the assembler must make between PC and Base relative*/
+			{/*Note that format 3 always prints the displacement in its final 12 bit field as opposed to 4's 20 bit*/
 				printf("\nLine %d is format 3", lCount);
+				char* pOp = getOpcode(symbol);
+				char* indexed = strtok(NULL, " ,\t\n\r");
+				if (indexed != NULL) /*Check for Null first to prevent a segFault. Note that there are no two operand format 3's. A comma will always indicate indexed here*/
+				{
+					if (strcmp("X", indexed) == 0)/*INDEXED: look up symbol address from table, flip n&i x&e bits*/
+					{
+						int pAdd = searchSymbol(field3);
+						pAdd ^= (eMask * 8); /*x*/
+						printf("%X|%.6X", strtol(pOp, NULL, 16) + 3, pAdd); /*adding 3 to first byte flips n and i*/
+					}
+				}
+				else if (field3[0] == 64)/*INDIRECT: remove @, lookup symbol address from table, TA Calc, ...*/
+				{ 
+					removeFirstChar(field3);
+					int pAdd = searchSymbol(field3);
+					TACalc(field3);
+				}
+				else if (field3[0] == 35)/*IMMEDIATE: remove #, read symbol as address in decimal,...*/
+				{
+					removeFirstChar(field3);
+					int pAdd = atoi(field3);
+					TACalc(field3);
+				}
+				else/*SIMPLE: look up symbol address from table, flip n&i&e. Hope this doesn't let in errors*/
+				{
+					int pAdd = searchSymbol(field3);
+					TACalc(field3);
+				}
+
 			}	
 			else if (formats[lCount] == 4)/*Format 4 is always indicated by a plus, and then no flag, trailing X, @, or #*/
 			{
-				int j = 0;
-				while (symbol[j] != '\0') /*remove leading + from symbol*/
-				{
-					symbol[j] = symbol[j + 1];
-					j++;
-				}
-				printf("\nLine %d is format 4 op: %s operand: %s ", lCount,symbol,field3);
-				if (field3[0] == 64)/*leading @ means indirect*/
-				{/**/
-					int i = 0;
-					while (field3[i] != '\0')
+				removeFirstChar(symbol);
+				printf("\nLine %d is format 4 op: %s operand: %s| ", lCount,symbol,field3);
+				char* pOp = getOpcode(symbol);
+				char* indexed = strtok(NULL, " ,\t\n\r");
+				if (indexed != NULL) /*Check for Null first to prevent a segFault. Note that there are no two operand format 4's. A comma will always indicate indexed here*/
+				{/*does this create logic errors with the following cases? probably not.. but it may exclude cases where the next symbol is uhhh idk*/
+					if (strcmp("X", indexed) == 0)/*INDEXED: look up symbol address from table, flip n&i x&e bits*/
 					{
-						field3[i] = field3[i + 1];
-						i++;
+						int pAdd = searchSymbol(field3);
+						pAdd ^= (eMask * 8); /*x*/
+						printf("%X%.6X", strtol(pOp, NULL, 16) + 3,pAdd); /*adding 3 to first byte flips n and i*/
 					}
-					int TaLocation = searchSymbol(field3);
-					printf("its location: %d", TaLocation);
+				}
+				else if (field3[0] == 64)/*INDIRECT: remove @, lookup symbol address from table, flip n&e*/
+				{
+					removeFirstChar(field3);
+					int pAdd = searchSymbol(field3);
+					pAdd ^= eMask;
+					printf("%X%.6X", strtol(pOp, NULL, 16) + 1, pAdd);
 					/*printf("the value at this location: %d", )*/
 
 				}
-				else if (field3[0] == 35)/*leading # means immediate*/
+				else if (field3[0] == 35)/*IMMEDIATE: remove #, read symbol as address in decimal, flip i&e bit*/
 				{
-					int i = 0;
-					while (field3[i] != '\0')
-					{
-						field3[i] = field3[i + 1];
-						i++;
-					}
+					removeFirstChar(field3);
 					int pAdd = atoi(field3);
 					pAdd ^= eMask; /*getOpcode is a string in hex, field3 is a string in decimal*/
-					char* pOp = getOpcode(symbol);
 					printf("%X%.6X", strtol(pOp, NULL, 16) +1,pAdd); /*adding 1 flips the i bit in 1st byte, eMask flips e in remaining 3bytes which contains address*/
 					/*printf("address BE: %X", atoi(field3));*/
 				}
-				else if (field3[7] == 0) /*trailing X means indexed*/
+				else/*SIMPLE: look up symbol address from table, flip n&i&e*/
 				{
-					printf();
-				}
-				else/*no flag means simple*/
-				{
-					int pAdd = atoi(field3);
+					int pAdd = searchSymbol(field3);
 					pAdd ^= eMask;
-					char* pOp = getOpcode(symbol);
-					printf("%X%.6X", strtol(pOp, NULL, 16) + 3, pAdd);/*adding 3 flips both n and i as is appropriate, eMask flips e*/
-				}
+					printf("%X%.6X", strtol(pOp, NULL, 16) + 3, pAdd);/*adding 3 flips both n and i appropriate, eMask flips e*/
+				}/*these options could definitely have a method for less repeated code*/
 			}
 			
 

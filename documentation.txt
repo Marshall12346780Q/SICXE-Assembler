@@ -2,8 +2,7 @@ Documentation for the SIC XE Assembler, Project 4
 Due Presentation Day
 Group: Marshall Lang
 
-Finished format 3 logic. Every format-case is now handled, though 
-the output needs to be formatted. M records need to be printed, but should
-be much easier as they only include format 4 instructions. Also needs to switch
-from print-to-console to print to file. Errors and exceptions should be checked 
-with a code review and then tested.
+All formats printing is finished, with minor debugging jargon to remove.
+M records are finished
+Needs to print to file
+Needs a code review for error handling

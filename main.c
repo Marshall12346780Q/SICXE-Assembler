@@ -270,7 +270,6 @@ int main(int argc, char* argv[]) {
 		}
 		else /*Instruction*/
 		{
-			int eMask = 0x100000; /*double each time to get p b and x masks*/
 			/*printf("\nT%.6X ", adds[lCount]);
 			printf("  %s",getOpcode(symbol));*/
 			field3 = strtok(NULL, " ,\t\n\r");
@@ -293,34 +292,35 @@ int main(int argc, char* argv[]) {
 			}
 			else if(formats[lCount] == 3)/*Format 3 does some stuff based on size of operand, the flags, and the decision the assembler must make between PC and Base relative*/
 			{/*Note that format 3 always prints the displacement in its final 12 bit field as opposed to 4's 20 bit*/
-				printf("\nLine %d is format 3", lCount);
-				char* pOp = getOpcode(symbol);
+				printf("\nLine %d is format 3 ", lCount);
+				int pOp = strtol(getOpcode(symbol),NULL,16); /*print Opcode, as an int for flagging*/
 				char* indexed = strtok(NULL, " ,\t\n\r");
 				if (indexed != NULL) /*Check for Null first to prevent a segFault. Note that there are no two operand format 3's. A comma will always indicate indexed here*/
 				{
 					if (strcmp("X", indexed) == 0)/*INDEXED: look up symbol address from table, flip n&i x&e bits*/
 					{
-						int pAdd = searchSymbol(field3);
-						pAdd ^= (eMask * 8); /*x*/
-						printf("%X|%.6X", strtol(pOp, NULL, 16) + 3, pAdd); /*adding 3 to first byte flips n and i*/
+						TACalc(field3, adds[lCount]);
+						int pAdd = strtol(field3, NULL, 16);
+						pAdd ^= 0x8000; 
+						printf("indexed %X|%.4X", pOp + 3, pAdd); 
 					}
 				}
-				else if (field3[0] == 64)/*INDIRECT: remove @, lookup symbol address from table, TA Calc, ...*/
+				else if (field3[0] == 64)/*INDIRECT: remove @, lookup symbol address from table, TA Calc, flag n*/
 				{ 
 					removeFirstChar(field3);
-					int pAdd = searchSymbol(field3);
 					TACalc(field3, adds[lCount]);
+					printf("indirect %.2X|%s",pOp+2, field3);
 				}
-				else if (field3[0] == 35)/*IMMEDIATE: remove #, read symbol as address in decimal,...*/
+				else if (field3[0] == 35)/*IMMEDIATE: remove #, read symbol as address in decimal,*/
 				{
 					removeFirstChar(field3);
-					int pAdd = atoi(field3);
 					TACalc(field3, adds[lCount]);
+					printf("immediate %.2X|%s", pOp+1, field3);
 				}
-				else/*SIMPLE: look up symbol address from table, flip n&i&e. Hope this doesn't let in errors*/
+				else/*SIMPLE: look up symbol address from table, flip n&i. Hope this doesn't let in errors*/
 				{
-					int pAdd = searchSymbol(field3);
-					TACalc(field3, adds[lCount]);
+					TACalc(field3, adds[lCount]);/*can also return as int for standard flagging process*/
+					printf("simple %.2X|%s", pOp+3,field3);
 				}
 
 			}	
@@ -328,39 +328,39 @@ int main(int argc, char* argv[]) {
 			{
 				removeFirstChar(symbol);
 				printf("\nLine %d is format 4 op: %s operand: %s| ", lCount,symbol,field3);
-				char* pOp = getOpcode(symbol);
+				int pOp = strtol(getOpcode(symbol), NULL, 16);
 				char* indexed = strtok(NULL, " ,\t\n\r");
 				if (indexed != NULL) /*Check for Null first to prevent a segFault. Note that there are no two operand format 4's. A comma will always indicate indexed here*/
 				{/*does this create logic errors with the following cases? probably not.. but it may exclude cases where the next symbol is uhhh idk*/
 					if (strcmp("X", indexed) == 0)/*INDEXED: look up symbol address from table, flip n&i x&e bits*/
 					{
 						int pAdd = searchSymbol(field3);
-						pAdd ^= (eMask * 8); /*x*/
-						printf("%X%.6X", strtol(pOp, NULL, 16) + 3,pAdd); /*adding 3 to first byte flips n and i*/
+						pAdd ^= 0x800000; /*x*/
+						pAdd ^= 0x100000; /*e*/
+						printf("%X%.6X", pOp+ 3,pAdd); /*adding 3 to first byte flips n and i*/
 					}
 				}
 				else if (field3[0] == 64)/*INDIRECT: remove @, lookup symbol address from table, flip n&e*/
 				{
 					removeFirstChar(field3);
 					int pAdd = searchSymbol(field3);
-					pAdd ^= eMask;
-					printf("%X%.6X", strtol(pOp, NULL, 16) + 1, pAdd);
-					/*printf("the value at this location: %d", )*/
+					pAdd ^= 0x100000;
+					printf("%X%.6X", pOp + 1, pAdd);
 
 				}
 				else if (field3[0] == 35)/*IMMEDIATE: remove #, read symbol as address in decimal, flip i&e bit*/
 				{
 					removeFirstChar(field3);
-					int pAdd = atoi(field3);
-					pAdd ^= eMask; /*getOpcode is a string in hex, field3 is a string in decimal*/
-					printf("%X%.6X", strtol(pOp, NULL, 16) +1,pAdd); /*adding 1 flips the i bit in 1st byte, eMask flips e in remaining 3bytes which contains address*/
+					int pAdd = atoi(field3);/*returns 0 if it's not an int, but might actually want constant 0*/
+					pAdd ^= 0x100000; /*getOpcode is a string in hex, field3 is a string in decimal*/
+					printf("%X%.6X", pOp +1,pAdd); /*adding 1 flips the i bit in 1st byte, eMask flips e in remaining 3bytes which contains address*/
 					/*printf("address BE: %X", atoi(field3));*/
 				}
 				else/*SIMPLE: look up symbol address from table, flip n&i&e*/
 				{
 					int pAdd = searchSymbol(field3);
-					pAdd ^= eMask;
-					printf("%X%.6X", strtol(pOp, NULL, 16) + 3, pAdd);/*adding 3 flips both n and i appropriate, eMask flips e*/
+					pAdd ^= 0x100000;
+					printf("%X%.6X", pOp + 3, pAdd);/*adding 3 flips both n and i appropriate, eMask flips e*/
 				}/*these options could definitely have a method for less repeated code*/
 			}		
 		}
@@ -368,14 +368,6 @@ int main(int argc, char* argv[]) {
 		if (lCount == startLine) /*START line*/
 		{
 			printf("\nH%s  %.6X%.6X", name, adds[startLine], address - adds[startLine]);
-		}
-		else if (adds[lCount] > 1) /*if it's an instruction*/
-		{
-			printf("\nT%.6X%.2d%s%.4X", adds[lCount], recordLength, getOpcode(symbol), searchSymbol(field3));
-			if (searchSymbol(field3) == 0)
-			{
-				adds[lCount] = 0; /*print T record but not an M record for RSUB*/
-			}
 		}
 		else if(adds[lCount] < 0)/*if its a directive in need of printing; BYTE and WORD*/
 		{
@@ -385,15 +377,13 @@ int main(int argc, char* argv[]) {
 	}
 	/*M records, skip lines flagged as uneccessary by -1*/
 	/*M records are now only needed by format 4 instructions pog*/
-	int checkedRecords = 0;
 	for (int k = startLine+1; k < lCount; k++)
 	{
-		if (adds[k] > 1)
+		if (formats[k] == 4)
 		{
 			printf("\nM%.6X04+%s", adds[k] + 1, name);
 			/*printf(" for line %d", k);*/
 		}
-		checkedRecords = k;
 	}
 	/*E Record*/
 	printf("\nE%.6X\n",adds[startLine]);
@@ -401,32 +391,38 @@ int main(int argc, char* argv[]) {
 	fclose(fp);
 	fclose(p2);
 }
-int TACalc(char* f3, int currentAddress)/*Target Address calculator from field3*/
+int TACalc(char* f3, int currentAddress)/*Target Address calculator from field3, changes f3 in calling function*/
 {
 	int iConst = atoi(f3);/*atoi returns 0 if f3 is not an int at all (is a symbol, which is quite common)*/
 	int add;
-	if (iConst == 0) /*the m case where field3 is a symbol*/
+	if (iConst <= 4095 && iConst > 0) /*the c case, where field3 is a constant less than or eq 4095*/
 	{
-		/*if PC-2048 or PC +2047 can reach the address, use PC*/
-		add = searchSymbol(f3);
+		sprintf(f3,"%4X", iConst);
+	}
+	else /*the m case where field3 is a symbol or a number greater than 4095*/
+	{
+		if (iConst == 0){add = searchSymbol(f3);}
+		else{add = iConst;}
 		int PCdisp = add - (currentAddress + 3);/*we know its a format 3 instruction so we can add 3 bytes to get PC, example supports this even for directives on next line*/
 		int baseDisp = add - b;
 		if (PCdisp >= -2048 && PCdisp <= 2047)
 		{
-			printf("PC-relative case. PC value: %X address: %X disp: %X", currentAddress+3, add, PCdisp);
+			/*printf("PC-relative case. PC value: %X address: %X disp: %X", currentAddress+3, add, PCdisp);*/
+			PCdisp = PCdisp & 0xFFF;
+			PCdisp ^= 0x2000;
+			sprintf(f3, "%4X", PCdisp);/*AND operation with FFF = 1111 1111 1111 to zero out unneeded bits*/
 		}
 		else if (baseDisp >= 0 && baseDisp <= 4095)/*else if BASE+4095 can reach the address, use BASE*/
 		{
+			baseDisp = baseDisp & 0xFFF;
+			baseDisp ^= 0x4000;
 			printf("BASE-relative case. BASE value: %X address: %X disp: %X", b, add, baseDisp);
+			sprintf(f3, "%4X", baseDisp);
 		}
 		else /*Can't be reached*/
 		{
 			printf("Memory address %X can't be reached. Use a format 4 instruction or a different BASE register value",add);
 			return -1;
 		}
-	}
-	else if (iConst <= 4095) /*the c case, where field3 is a constant less than or eq 4095*/
-	{
-		return iConst;
 	}
 }

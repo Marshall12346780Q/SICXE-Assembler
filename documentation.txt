@@ -2,4 +2,5 @@ Documentation for the SIC XE Assembler, Project 4
 Due Presentation Day
 Group: Marshall Lang
 
-Error with no-parameter sicxe instructions resolved.
+Needed to comment out a couple more debugging outputs for SIC-extension files.
+Finished.

@@ -203,7 +203,7 @@ int main(int argc, char* argv[]) {
 	int fLength = strlen(filename);
 	if (filename[fLength - 3] == 's' && filename[fLength - 2] == 'i' && filename[fLength - 1] == 'c')
 	{/*detect if non-xe .sic file*/
-		printf("normie sic detected\n");
+		/*printf("base sic detected\n");*/
 		fLength = -1; /*flag to indicate basic .sic*/
 	}
 	FILE* p2 = fopen(strcat(argv[1], ".obj"), "w"); /*open file for writing*/ 
@@ -304,7 +304,7 @@ int main(int argc, char* argv[]) {
 				int pOp = strtol(getOpcode(symbol), NULL, 16); /*print Opcode, as an int for flagging*/
 				if (field3 == NULL) /*catch the Null case; an instruction with no operands*/
 				{
-					printf("Instruction %s with no operand %d\n", symbol, lCount);
+					/*printf("Instruction %s with no operand %d\n", symbol, lCount);*/
 					fprintf(p2, "%.2X%.4X", pOp, 0);
 					/*return 0;*/
 				}
@@ -319,7 +319,7 @@ int main(int argc, char* argv[]) {
 						int pAdd;
 						if (fLength == -1)
 						{
-							printf("INDEXED SIC instrution line %d\n", lCount);
+							/*printf("INDEXED SIC instrution line %d\n", lCount);*/
 							pAdd = searchSymbol(field3) - adds[lCount];
 						}
 						else 
@@ -334,7 +334,7 @@ int main(int argc, char* argv[]) {
 					}
 					else if (fLength == -1)/*SIC instruction: flip no bits just print as in pass2*/
 					{
-						printf("SIC instruction line %d\n", lCount);
+						/*printf("SIC instruction line %d\n", lCount);*/
 						fprintf(p2, "%.2X%X",pOp,searchSymbol(field3)-adds[lCount]);
 					}
 					else if (field3[0] == 64)/*INDIRECT: remove @, lookup symbol address from table, TA Calc, flag n*/

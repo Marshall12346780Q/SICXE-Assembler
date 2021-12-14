@@ -2,6 +2,4 @@ Documentation for the SIC XE Assembler, Project 4
 Due Presentation Day
 Group: Marshall Lang
 
-Prints to file, debugging outputs removed.
-'Finished' but could certainly use a code review for 
-error handling.
+Error with no-parameter sicxe instructions resolved.
